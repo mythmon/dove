@@ -1,0 +1,4 @@
+Dove
+====
+This is a tool to automatically get things from things from a rTorrent
+server via SSH tunnels and the rTorrent XMLRPC API.

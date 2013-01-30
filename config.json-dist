@@ -1,0 +1,6 @@
+{
+    "rpc_port": 7777,
+    "ssh_user": "some_user",
+    "ssh_host": "some.host.com",
+    "forward_port": 7777
+}
