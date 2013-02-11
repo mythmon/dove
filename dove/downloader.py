@@ -58,12 +58,6 @@ class TorrentJob(object):
         else:
             remote_path = os.path.join(dir_path, target_path)
 
-        print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
-        print 'dir_path', dir_path
-        print 'target_path', target_path
-        print 'remote_path', remote_path
-        print "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
-
         # It would be bad if this were zero length.
         assert remote_path
 
@@ -77,9 +71,6 @@ class TorrentJob(object):
                 .format(remote_path=remote_path, **config),
             config['download_dir']
         ])
-
-        print rsync_command
-        print ' '.join(rsync_command)
 
         torrent.state = 'downloading'
         self.session.add(torrent)
