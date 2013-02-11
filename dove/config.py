@@ -7,6 +7,9 @@ config = {
     'tunnel_timeout': 10,
     'forward_port': 51015,
     'rpc_host': 'localhost',
+    'rsync_opts': '-Phaz',
+    'download_dir': 'downloads',
+    'parallel': 2,
 }
 
 try:
@@ -21,6 +24,7 @@ required_keys = [
     'ssh_port', 'ssh_user', 'ssh_host',
     'forward_port', 'tunnel_timeout',
     'rpc_host', 'rpc_port',
+    'download_dir',
 ]
 
 fail = False
