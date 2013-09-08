@@ -1,6 +1,8 @@
 import os
 import shlex
 import subprocess
+import xmlrpclib
+from time import sleep
 
 from dove.config import config
 
@@ -24,14 +26,29 @@ class DownloadManager(object):
         self.torrent_queue.append(torrent)
 
     def download_all(self):
-        while len(self.torrent_queue) > 0:
+        while self.torrent_queue or self.current_downloads:
             self._load_up_queue()
             self._wait_for_one_finish()
 
     def _load_up_queue(self):
-        while len(self.current_downloads) < config['parallel']:
-            torrent = self.torrent_queue.pop()
-            job = TorrentJob(self.rt, self.session, torrent)
+        while (len(self.current_downloads) < config['parallel'] and 
+               self.torrent_queue):
+            print 'Adding job'
+            try:
+                torrent = self.torrent_queue.pop()
+            except IndexError:
+                return
+
+            try:
+                job = TorrentJob(self.rt, self.session, torrent)
+            except xmlrpclib.Fault:
+                # There was an error communicating with the server.
+                torrent.state = 'error'
+                self.session.add(torrent)
+                self.session.commit()
+                print 'Problem getting torrent from server.'
+                continue
+
             self.current_downloads.append(job)
 
     def _wait_for_one_finish(self):
@@ -39,9 +56,12 @@ class DownloadManager(object):
             for download in self.current_downloads:
                 done = False
                 if download.is_done():
+                    self.current_downloads.remove(download)
+                    print 'Job done'
                     done = True
             if done:
                 return
+            sleep(5)
 
 
 class TorrentJob(object):
@@ -53,6 +73,7 @@ class TorrentJob(object):
 
         dir_path = self.rt.d.get_directory(torrent.info_hash)
         target_path = self.rt.d.get_name(torrent.info_hash)
+        # Handle both files and directories
         if dir_path.endswith(target_path):
             remote_path = dir_path
         else:
@@ -66,8 +87,8 @@ class TorrentJob(object):
         ]
         rsync_command.extend(shlex.split(config['rsync_opts']))
         rsync_command.extend([
-            '--rsh=ssh -p{ssh_port}'.format(**config),
-            "{ssh_user}@{ssh_host}:'{remote_path}'"
+            '--rsh=ssh -p{rsync_port}'.format(**config),
+            "{rsync_user}@{rsync_host}:'{remote_path}'"
                 .format(remote_path=remote_path, **config),
             config['download_dir']
         ])
@@ -80,13 +101,14 @@ class TorrentJob(object):
 
     def is_done(self):
         code = self.rsync.poll()
-        if code is not None:
+        if code is None:
+            return False
+        else:
             if code == 0:
                 self.torrent.state = 'done'
             else:
                 self.torrent.state = 'error'
+            self.rsync.wait()
             self.session.add(self.torrent)
             self.session.commit()
             return True
-
-        return False

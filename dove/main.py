@@ -22,11 +22,10 @@ def main():
         print_progress('Getting torrent statuses')
 
         for h, done in zip(hashes, mc()):
-            torrent, _ = db.get_or_create(session, db.Torrent, info_hash=h)
-            if done:
+            torrent, created = db.get_or_create(session, db.Torrent, {'state': 'incomplete'}, info_hash=h)
+
+            if torrent.state == 'incomplete' and done:
                 torrent.state = 'ready'
-            else:
-                torrent.state = 'incomplete'
 
             print h, done, torrent.state
             session.add(torrent)
@@ -35,12 +34,15 @@ def main():
         print_progress('Starting downloads')
         ready_torrents = session.query(db.Torrent).filter(
             or_(db.Torrent.state == 'ready',
-                db.Torrent.state == 'downloading'))
+                db.Torrent.state == 'downloading',
+                db.Torrent.state == 'error'))
 
         dlman = downloader.DownloadManager(rt, session)
         for torrent in ready_torrents:
             dlman.add_torrent(torrent)
         dlman.download_all()
+
+        print_progress('Done')
 
 
 if __name__ == '__main__':
