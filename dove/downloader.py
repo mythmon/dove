@@ -59,8 +59,8 @@ class DownloadManager(object):
                     self.current_downloads.remove(download)
                     print 'Job done'
                     done = True
-            if done:
-                return
+                if done:
+                    return
             sleep(5)
 
 
@@ -86,9 +86,10 @@ class TorrentJob(object):
             'rsync',
         ]
         rsync_command.extend(shlex.split(config['rsync_opts']))
+        remote_path = remote_path.replace('"', '\\"')
         rsync_command.extend([
             '--rsh=ssh -p{rsync_port}'.format(**config),
-            "{rsync_user}@{rsync_host}:'{remote_path}'"
+            '{rsync_user}@{rsync_host}:"{remote_path}"'
                 .format(remote_path=remote_path, **config),
             config['download_dir']
         ])
@@ -96,6 +97,8 @@ class TorrentJob(object):
         torrent.state = 'downloading'
         self.session.add(torrent)
         self.session.commit()
+
+        print rsync_command
 
         self.rsync = subprocess.Popen(rsync_command)
 
